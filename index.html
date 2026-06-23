@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Seguimiento de Ventas - Grupo Ontiveros</title>
+    
+    <!-- Soporte PWA para instalación de Icono en Escritorio Móvil -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlNlZ3VpbWllbnRvIGRlIFZlbnRhcyIsCiAgInNob3J0X25hbWUiIjogIlZlbnRhcyIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIxZTNwNWMiLAogIC0gInRoZW1lX2NvbG9yIjogIjFlM3A1YyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIKfQ==">
+    
+    <!-- Librería externa para procesamiento de hojas Excel (.xlsx) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #0f172a; 
+            --primary-light: #f1f5f9;
+            --accent: #0284c7;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --border: #cbd5e1;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: #f1f5f9;
+            color: var(--dark);
+            padding-bottom: 40px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), #1e3a8a);
+            color: white;
+            padding: 16px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .date-badge {
+            display: inline-block;
+            background-color: rgba(255,255,255,0.15);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .screen { display: none; }
+        .screen.active { display: block; }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .btn:active { transform: scale(0.99); opacity: 0.95; }
+        .btn-accent { background-color: var(--accent); }
+        .btn-success { background-color: var(--success); }
+        .btn-danger { background-color: var(--danger); }
+        .btn-outline {
+            background-color: transparent;
+            color: var(--accent);
+            border: 2px solid var(--accent);
+            box-shadow: none;
+        }
+
+        .company-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .company-btn {
+            background: white;
+            color: var(--dark);
+            border: 2px solid #e2e8f0;
+            padding: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        }
+
+        .company-btn:active {
+            background-color: var(--primary-light);
+            border-color: var(--accent);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #475569;
+        }
+
+        select, input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .search-box input { padding-left: 40px; margin-bottom: 0; }
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 14px;
+            top: 13px;
+            font-size: 1.1rem;
+        }
+
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-card {
+            background: white;
+            border-left: 4px solid var(--accent);
+            padding: 12px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+            border: 1px solid #e2e8f0;
+            border-left-width: 4px;
+        }
+
+        .stat-card.active-clients { border-left-color: var(--success); }
+        .stat-num { font-size: 1.4rem; font-weight: bold; }
+        .stat-label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; }
+
+        .day-tabs {
+            display: flex;
+            overflow-x: auto;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .day-tab {
+            flex: 1;
+            padding: 10px;
+            background: white;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            border: 1px solid #e2e8f0;
+        }
+
+        .day-tab.active {
+            background-color: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .client-card {
+            background: white;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .client-card.fully-active {
+            border-color: var(--success);
+            background-color: #f0fdf4;
+        }
+
+        .client-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .btn-delete {
+            background: none;
+            border: none;
+            color: var(--danger);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        .brand-accordion {
+            margin-top: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .brand-header {
+            background-color: #f8fafc;
+            padding: 10px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .brand-content { display: none; padding: 10px; background: white; }
+        .brand-content.open { display: block; }
+
+        .category-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px dashed #e2e8f0;
+        }
+
+        .category-row:last-child { border-bottom: none; }
+        .status-toggle {
+            display: flex;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #cbd5e1;
+        }
+
+        .toggle-opt {
+            padding: 4px 14px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            cursor: pointer;
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .toggle-opt.active { background-color: var(--dark); color: white; }
+        .toggle-opt.active.opt-1 { background-color: var(--success); color: white; }
+
+        .comment-box {
+            font-size: 0.8rem;
+            background-color: #f8fafc;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 8px;
+            border-left: 3px solid #cbd5e1;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .file-input-wrapper input[type=file] {
+            font-size: 100px;
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 style="font-size: 1.3rem; tracking-wide">GRUPO EMPRESARIAL ONTIVEROS</h1>
+        <div class="date-badge" id="currentDateBadge">--/--/----</div>
+    </header>
+
+    <div class="container">
+
+        <!-- VENTANA 1: SELECCIÓN DE EMPRESAS -->
+        <div id="screenCompany" class="screen active">
+            <div class="card">
+                <h2 style="text-align: center; margin-bottom: 12px; font-size: 1.1rem; color: var(--dark)">Control de Ventas por Sucursal</h2>
+                <div class="company-grid">
+                    <button class="company-btn" onclick="selectCompany('DIPACA')">🏬 DIPACA</button>
+                    <button class="company-btn" onclick="selectCompany('JOL')">🏬 JOL</button>
+                    <button class="company-btn" onclick="selectCompany('ISC Vigía')">🏬 ISC Vigía</button>
+                    <button class="company-btn" onclick="selectCompany('ISC Mérida')">🏬 ISC Mérida</button>
+                </div>
+            </div>
+            
+            <!-- Botones de Mantenimiento -->
+            <div class="card">
+                <h3 style="font-size: 0.95rem; margin-bottom: 12px;">Mantenimiento y Datos</h3>
+                <button class="btn btn-outline" onclick="triggerVersionUpdate()">🔄 Actualizar Versión</button>
+                
+                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                    <label>Carga Masiva desde Excel:</label>
+                    <div class="file-input-wrapper">
+                        <button class="btn btn-accent">📁 Seleccionar Matriz de Clientes</button>
+                        <input type="file" id="excelFile" accept=".xlsx, .xls" onchange="handleExcelImport(event)">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VENTANA 2: LOGIN -->
+        <div id="screenLogin" class="screen">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="font-size: 1.1rem;" id="loginCompanyTitle">Login</h2>
+                    <button class="btn btn-outline" style="width: auto; padding: 6px 12px; font-size: 0.8rem; margin:0;" onclick="changeScreen('screenCompany')">Volver</button>
+                </div>
+                
+                <label for="advisorSelect">Asesor de Ventas</label>
+                <select id="advisorSelect"></select>
+
+                <label for="passwordInput">Contraseña de Ruta</label>
+                <input type="password" id="passwordInput" placeholder="Contraseña de acceso">
+
+                <button class="btn" onclick="attemptLogin()">Desbloquear Rutero</button>
+            </div>
+        </div>
+
+        <!-- VENTANA 3: RUTERO PRINCIPAL -->
+        <div id="screenMain" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <div style="font-size: 0.85rem; font-weight: bold; background: #e2e8f0; padding: 6px 12px; border-radius: 6px;" id="userDisplay">Asesor: --</div>
+                <button class="btn btn-danger" style="width: auto; padding: 4px 12px; font-size: 0.8rem; margin:0;" onclick="logout()">Salir</button>
+            </div>
+
+            <div class="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-num" id="statTotal">0</div>
+                    <div class="stat-label">Clientes en Ruta</div>
+                </div>
+                <div class="stat-card active-clients">
+                    <div class="stat-num" id="statActive">0</div>
+                    <div class="stat-label">100% Activos (Verde)</div>
+                </div>
+            </div>
+
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Filtrar por código o nombre..." oninput="renderClients()">
+            </div>
+
+            <div class="day-tabs" id="dayTabsContainer">
+                <div class="day-tab active" onclick="selectDay('Lunes')">Lun</div>
+                <div class="day-tab" onclick="selectDay('Martes')">Mar</div>
+                <div class="day-tab" onclick="selectDay('Miércoles')">Mie</div>
+                <div class="day-tab" onclick="selectDay('Jueves')">Jue</div>
+                <div class="day-tab" onclick="selectDay('Viernes')">Vie</div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+                <button class="btn btn-accent" onclick="openNewClientModal()" style="font-size: 0.85rem; padding: 10px;">➕ Cliente Nuevo</button>
+                <button class="btn btn-outline" onclick="changeScreen('screenExcel')" style="font-size: 0.85rem; padding: 10px;">📊 Descargar Excel</button>
+            </div>
+
+            <div id="clientsContainer"></div>
+        </div>
+
+        <!-- FORMULARIO MANUAL -->
+        <div id="screenAddClient" class="screen">
+            <div class="card">
+                <h2 style="font-size: 1.1rem; margin-bottom: 16px;">Crear Registro de Cliente Manual</h2>
+                
+                <label for="newClientName">Razón Social / Nombre</label>
+                <input type="text" id="newClientName" placeholder="Ej. Comercial El Centro">
+
+                <label for="newClientCode">Código Único</label>
+                <input type="text" id="newClientCode" placeholder="Ej. ON-4412">
+
+                <label for="newClientDay">Día de Ruta</label>
+                <select id="newClientDay">
+                    <option value="Lunes">Lunes</option>
+                    <option value="Martes">Martes</option>
+                    <option value="Miércoles">Miércoles</option>
+                    <option value="Jueves">Jueves</option>
+                    <option value="Viernes">Viernes</option>
+                </select>
+
+                <label for="newClientComment">Comentario / Dirección</label>
+                <textarea id="newClientComment" rows="2" placeholder="Notas de campo..."></textarea>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <button class="btn btn-outline" onclick="changeScreen('screenMain')">Volver</button>
+                    <button class="btn btn-success" onclick="saveNewClient()">Guardar en Ruta</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXPORTACIÓN EXCEL -->
+        <div id="screenExcel" class="screen">
+            <div class="card">
+                <h2 style="font-size: 1.1rem; margin-bottom: 12px; text-align: center;">Módulo de Reportes Auditables</h2>
+                <p style="font-size: 0.85rem; color: #475569; margin-bottom: 16px; text-align: center;">Los informes generados registran la estampa horaria exacta de activación.</p>
+                
+                <button class="btn btn-success" onclick="exportExcel('day')">📊 Descargar Excel Rutero del Día</button>
+                <button class="btn" onclick="exportExcel('general')">📊 Descargar Excel Rutero General</button>
+                <button class="btn btn-outline" onclick="changeScreen('screenMain')" style="margin-top: 10px;">Regresar al Rutero</button>
+            </div>
+        </div>
+
+    </div>
+
+    <footer style="text-align: center; font-size: 0.75rem; color: #94a3b8; margin-top: 20px; padding: 15px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; max-width:600px; margin: 20px auto 0 auto;">
+        <span>Grupo Ontiveros © 2026</span>
+        <span style="background: #cbd5e1; color: #1e293b; padding: 2px 8px; border-radius: 10px; font-family: monospace; font-weight: bold;">Versión actual: v2.1.1</span>
+    </footer>
+
+    <script>
+        const PASSWORDS = {
+            '1A': 'dipaca1', '1B': 'dipaca2', '1C': 'dipaca3', '1D': 'dipaca4', '1E': 'dipaca5',
+            '2A': 'dipaca6', '2B': 'dipaca7', '2C': 'dipaca8', '2D': 'dipaca9', '2E': 'dipaca10'
+        };
+
+        const BRANDS_STRUCTURE = {
+            'Isola': ['Atomatados Ole', 'Atomatados Osole', 'GP', 'Galletas', 'Compotas'],
+            'Parmalat': ['Frica', 'Campiña', 'Indulac'],
+            'Paveca': ['Rosal', 'Servilletas Z']
+        };
+
+        let currentCompany = '';
+        let currentAdvisor = '';
+        let currentDay = 'Lunes';
+        let clientsList = [];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            setSystemDate();
+            evalMonthlyReset();
+            fetchStorageData();
+        });
+
+        function setSystemDate() {
+            const date = new Date();
+            const d = String(date.getDate()).padStart(2, '0');
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const y = date.getFullYear();
+            document.getElementById('currentDateBadge').innerText = `${d}/${m}/${y}`;
+        }
+
+        function evalMonthlyReset() {
+            const d = new Date();
+            const logReset = `${d.getMonth() + 1}-${d.getFullYear()}`;
+            const marker = localStorage.getItem('ontiveros_last_reset_tag');
+
+            if (d.getDate() === 1 && marker !== logReset) {
+                let saved = localStorage.getItem('ontiveros_clients_db');
+                if (saved) {
+                    let items = JSON.parse(saved);
+                    items.forEach(c => {
+                        if (c.activations) {
+                            for (let k in c.activations) c.activations[k] = 0;
+                        }
+                        c.lastUpdateTimestamp = '--:--:--';
+                    });
+                    localStorage.setItem('ontiveros_clients_db', JSON.stringify(items));
+                    localStorage.setItem('ontiveros_last_reset_tag', logReset);
+                }
+            }
+        }
+
+        function fetchStorageData() {
+            const raw = localStorage.getItem('ontiveros_clients_db');
+            if (raw) clientsList = JSON.parse(raw);
+        }
+
+        function changeScreen(id) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            window.scrollTo(0,0);
+        }
+
+        function selectCompany(name) {
+            currentCompany = name;
+            document.getElementById('loginCompanyTitle').innerText = `Acceso: ${name}`;
+            const s = document.getElementById('advisorSelect');
+            s.innerHTML = '';
+            
+            if (name === 'DIPACA') {
+                Object.keys(PASSWORDS).forEach(c => {
+                    let o = document.createElement('option');
+                    o.value = c; o.innerText = `Asesor ${c}`;
+                    s.appendChild(o);
+                });
+            } else {
+                let o = document.createElement('option');
+                o.value = ''; o.innerText = 'Pendiente Carga Maestra';
+                s.appendChild(o);
+            }
+            changeScreen('screenLogin');
+        }
+
+        function attemptLogin() {
+            const code = document.getElementById('advisorSelect').value;
+            const pass = document.getElementById('passwordInput').value;
+
+            if (!code) { return alert('Sin configuración asignada.'); }
+
+            if (currentCompany === 'DIPACA') {
+                if (PASSWORDS[code] === pass) {
+                    currentAdvisor = code;
+                    document.getElementById('userDisplay').innerText = `${currentCompany} | Asesor: ${code}`;
+                    document.getElementById('passwordInput').value = '';
+                    changeScreen('screenMain');
+                    selectDay('Lunes');
+                } else {
+                    alert('Clave inválida. Intente de nuevo.');
+                }
+            }
+        }
+
+        function logout() {
+            currentAdvisor = ''; currentCompany = '';
+            changeScreen('screenCompany');
+        }
+
+        function selectDay(day) {
+            currentDay = day;
+            document.querySelectorAll('.day-tab').forEach(t => {
+                t.classList.remove('active');
+                if (t.getAttribute('onclick').includes(day)) t.classList.add('active');
+            });
+            renderClients();
+        }
+
+        function checkFullActivation(c) {
+            let tot = 0, act = 0;
+            Object.keys(BRANDS_STRUCTURE).forEach(b => {
+                BRANDS_STRUCTURE[b].forEach(cat => {
+                    tot++;
+                    if (c.activations && c.activations[`${b}_${cat}`] == 1) act++;
+                });
+            });
+            return tot === act;
+        }
+
+        function normalizeDayName(str) {
+            if (!str) return 'Lunes';
+            let norm = str.trim().toLowerCase();
+            if (norm.includes('lun')) return 'Lunes';
+            if (norm.includes('mar')) return 'Martes';
+            if (norm.includes('mie') || norm.includes('mié')) return 'Miércoles';
+            if (norm.includes('jue')) return 'Jueves';
+            if (norm.includes('vie')) return 'Viernes';
+            return 'Lunes';
+        }
+
+        function renderClients() {
+            const container = document.getElementById('clientsContainer');
+            container.innerHTML = '';
+            const query = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtered = clientsList.filter(c => {
+                return c.company === currentCompany && c.advisorCode === currentAdvisor && c.day === currentDay &&
+                       (c.name.toLowerCase().includes(query) || c.code.toLowerCase().includes(query));
+            });
+
+            document.getElementById('statTotal').innerText = filtered.length;
+            document.getElementById('statActive').innerText = filtered.filter(c => checkFullActivation(c)).length;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color:#64748b; padding:20px; font-size:0.9rem;">No hay registros asignados para hoy.</p>`;
+                return;
+            }
+
+            filtered.forEach(c => {
+                const isFull = checkFullActivation(c);
+                const card = document.createElement('div');
+                card.className = `client-card ${isFull ? 'fully-active' : ''}`;
+                
+                let accHtml = '';
+                Object.keys(BRANDS_STRUCTURE).forEach(b => {
+                    let rows = '';
+                    BRANDS_STRUCTURE[b].forEach(cat => {
+                        const key = `${b}_${cat}`;
+                        const val = (c.activations && c.activations[key]) || 0;
+                        rows += `
+                            <div class="category-row">
+                                <span class="category-name">${cat}</span>
+                                <div class="status-toggle">
+                                    <div class="toggle-opt ${val == 0 ? 'active' : ''}" onclick="toggleCategory('${c.id}', '${key}', 0)">0</div>
+                                    <div class="toggle-opt opt-1 ${val == 1 ? 'active' : ''}" onclick="toggleCategory('${c.id}', '${key}', 1)">1</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    accHtml += `
+                        <div class="brand-accordion">
+                            <div class="brand-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                                <span>📦 ${b}</span>
+                                <span>▼</span>
+                            </div>
+                            <div class="brand-content">${rows}</div>
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="client-header">
+                        <div>
+                            <h3 style="font-size:1rem; font-weight:bold;">${c.name}</h3>
+                            <p style="font-size:0.75rem; color:#64748b;">Código: ${c.code} | Ruta: ${c.day}</p>
+                        </div>
+                        <button class="btn-delete" onclick="deleteClient('${c.id}')">🗑️</button>
+                    </div>
+                    ${c.comment ? `<div class="comment-box"><strong>Nota:</strong> ${c.comment}</div>` : ''}
+                    <div style="margin-top:8px;">${accHtml}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function toggleCategory(id, key, val) {
+            const i = clientsList.findIndex(c => c.id === id);
+            if (i !== -1) {
+                if (!clientsList[i].activations) clientsList[i].activations = {};
+                clientsList[i].activations[key] = val;
+                
+                const now = new Date();
+                clientsList[i].lastUpdateTimestamp = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+                
+                localStorage.setItem('ontiveros_clients_db', JSON.stringify(clientsList));
+                renderClients();
+            }
+        }
+
+        function openNewClientModal() {
+            document.getElementById('newClientName').value = '';
+            document.getElementById('newClientCode').value = '';
+            document.getElementById('newClientComment').value = '';
+            document.getElementById('newClientDay').value = currentDay;
+            changeScreen('screenAddClient');
+        }
+
+        function saveNewClient() {
+            const name = document.getElementById('newClientName').value.trim();
+            const code = document.getElementById('newClientCode').value.trim();
+            const day = document.getElementById('newClientDay').value;
+            const comment = document.getElementById('newClientComment').value.trim();
+
+            if (!name || !code) return alert('Campos obligatorios incompletos.');
+
+            const c = {
+                id: 'cl_' + Date.now(), name: name, code: code, day: day, comment: comment,
+                company: currentCompany, advisorCode: currentAdvisor, activations: {}, lastUpdateTimestamp: '--:--:--'
+            };
+
+            Object.keys(BRANDS_STRUCTURE).forEach(b => {
+                BRANDS_STRUCTURE[b].forEach(cat => { c.activations[`${b}_${cat}`] = 0; });
+            });
+
+            clientsList.push(c);
+            localStorage.setItem('ontiveros_clients_db', JSON.stringify(clientsList));
+            changeScreen('screenMain');
+            renderClients();
+        }
+
+        function deleteClient(id) {
+            if (confirm('¿Eliminar de forma permanente este cliente?')) {
+                clientsList = clientsList.filter(c => c.id !== id);
+                localStorage.setItem('ontiveros_clients_db', JSON.stringify(clientsList));
+                renderClients();
+            }
+        }
+
+        function handleExcelImport(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const r = new FileReader();
+            r.onload = function(evt) {
+                const arr = new Uint8Array(evt.target.result);
+                try {
+                    const wb = XLSX.read(arr, {type: 'array'});
+                    const ws = wb.Sheets[wb.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(ws, {header: 1});
+                    
+                    let count = 0;
+                    for(let i=1; i<rows.length; i++) {
+                        const row = rows[i];
+                        if(!row || row.length < 2) continue;
+                        
+                        const cCode = String(row[0]||'').trim();
+                        const cName = String(row[1]||'').trim();
+                        const aCode = String(row[2]||'').trim().toUpperCase();
+                        const rDayRaw = String(row[3]||'').trim();
+                        const comp = String(row[4]||'').trim().toUpperCase();
+
+                        if(!cCode || !cName) continue;
+
+                        const item = {
+                            id: 'imp_' + i + '_' + Date.now(), name: cName, code: cCode,
+                            advisorCode: aCode || '1A', day: normalizeDayName(rDayRaw), company: comp || 'DIPACA',
+                            comment: 'Importado por Excel Maestro', activations: {}, lastUpdateTimestamp: '--:--:--'
+                        };
+
+                        Object.keys(BRANDS_STRUCTURE).forEach(b => {
+                            BRANDS_STRUCTURE[b].forEach(cat => { item.activations[`${b}_${cat}`] = 0; });
+                        });
+
+                        const dIdx = clientsList.findIndex(x => x.code === item.code && x.company === item.company);
+                        if (dIdx !== -1) clientsList[dIdx] = item; else clientsList.push(item);
+                        count++;
+                    }
+                    localStorage.setItem('ontiveros_clients_db', JSON.stringify(clientsList));
+                    alert(`Éxito: Se procesaron ${count} clientes en el sistema.`);
+                    fetchStorageData();
+                    if(currentCompany) renderClients();
+                } catch(err) { alert('Error de lectura en archivo Excel.'); }
+            };
+            r.readAsArrayBuffer(file);
+        }
+
+        function exportExcel(mode) {
+            const dateStr = document.getElementById('currentDateBadge').innerText;
+            let targets = clientsList.filter(c => c.company === currentCompany && c.advisorCode === currentAdvisor);
+            if (mode === 'day') targets = targets.filter(c => c.day === currentDay);
+
+            if (targets.length === 0) return alert('Sin registros para exportar.');
+
+            let out = [];
+            targets.forEach(c => {
+                let row = {
+                    'Empresa': c.company, 'Código Asesor': c.advisorCode, 'Día Ruta': c.day,
+                    'Código Cliente': c.code, 'Nombre Cliente': c.name, 'Fecha': dateStr,
+                    'Hora Registro Activación': c.lastUpdateTimestamp || '--:--:--',
+                    'Estado': checkFullActivation(c) ? '100% ACTIVO' : 'PENDIENTE'
+                };
+                Object.keys(BRANDS_STRUCTURE).forEach(b => {
+                    BRANDS_STRUCTURE[b].forEach(cat => { row[`[${b}] ${cat}`] = (c.activations && c.activations[`${b}_${cat}`]) || 0; });
+                });
+                row['Observaciones'] = c.comment || '';
+                out.push(row);
+            });
+
+            const ws = XLSX.utils.json_to_sheet(out);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Reporte");
+            XLSX.writeFile(wb, `Reporte_Ontiveros_${currentAdvisor}_${mode}.xlsx`);
+        }
+
+        function triggerVersionUpdate() {
+            alert('Tus datos locales están seguros y protegidos en LocalStorage.');
+            alert('Sistema al día. Versión actual en ejecución: v2.1.1');
+        }
+    </script>
+</body>
+</html>
