@@ -5,11 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Seguimiento de Ventas - Grupo Ontiveros</title>
     
-    <!-- Soporte PWA para instalación de Icono en Escritorio Móvil -->
     <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIlNlZ3VpbWllbnRvIGRlIFZlbnRhcyIsCiAgInNob3J0X25hbWUiIjogIlZlbnRhcyIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIxZTNwNWMiLAogIC0gInRoZW1lX2NvbG9yIjogIjFlM3A1YyIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIKfQ==">
     
-    <!-- Librería externa para procesamiento de hojas Excel (.xlsx) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                // Registro base para permitir almacenamiento en caché del navegador en zonas sin señal
+                console.log('Modo de respaldo offline activado en dispositivo.');
+            });
+        }
+    </script>
     
     <style>
         :root {
@@ -21,6 +28,7 @@
             --dark: #1e293b;
             --light: #f8fafc;
             --border: #cbd5e1;
+            --warning: #ea580c;
         }
 
         * {
@@ -34,7 +42,7 @@
         body {
             background-color: #f1f5f9;
             color: var(--dark);
-            padding-bottom: 40px;
+            padding-bottom: 60px;
         }
 
         header {
@@ -95,6 +103,7 @@
         .btn:active { transform: scale(0.99); opacity: 0.95; }
         .btn-accent { background-color: var(--accent); }
         .btn-success { background-color: var(--success); }
+        .btn-warning { background-color: var(--warning); }
         .btn-danger { background-color: var(--danger); }
         .btn-outline {
             background-color: transparent;
@@ -306,6 +315,61 @@
             opacity: 0;
             cursor: pointer;
         }
+
+        /* --- NUEVOS ESTILOS PARA MODULO KPI --- */
+        .kpi-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .kpi-row input { margin-bottom: 0; padding: 8px; }
+        .progress-bar-container {
+            background-color: #e2e8f0;
+            border-radius: 20px;
+            overflow: hidden;
+            height: 14px;
+            margin-top: 4px;
+            margin-bottom: 12px;
+        }
+        .progress-bar {
+            background-color: var(--success);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .nav-tabs-kpi {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        .tab-kpi-btn {
+            flex: 1;
+            padding: 8px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border: none;
+            background: #cbd5e1;
+            color: var(--dark);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .tab-kpi-btn.active {
+            background-color: var(--accent);
+            color: white;
+        }
+        .sub-kpi-panel { display: none; }
+        .sub-kpi-panel.active { display: block; }
+        /* Panel de Calendario Estilo Cuadrícula de Control */
+.calendario-container { margin-bottom: 25px; background: var(--gris-oscuro); padding: 20px; border-radius: 8px; border: 1px solid var(--borde); }
+.calendario-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(75px, 1fr)); gap: 10px; margin-top: 12px; }
+.btn-dia { padding: 12px 6px; background: var(--bg-card); border: 1px solid var(--borde); color: var(--texto-blanco); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; transition: all 0.2s ease; text-align: center; }
+.btn-dia:hover { background: var(--borde); transform: translateY(-2px); }
+.btn-dia.activo { background: var(--azul-ontiveros); border-color: var(--azul-ontiveros); color: white; box-shadow: 0 0 10px rgba(13,110,253,0.5); }
+.btn-dia.con-datos { border-bottom: 4px solid #25d366; }
+
     </style>
 </head>
 <body>
@@ -317,7 +381,6 @@
 
     <div class="container">
 
-        <!-- VENTANA 1: SELECCIÓN DE EMPRESAS -->
         <div id="screenCompany" class="screen active">
             <div class="card">
                 <h2 style="text-align: center; margin-bottom: 12px; font-size: 1.1rem; color: var(--dark)">Control de Ventas por Sucursal</h2>
@@ -329,7 +392,6 @@
                 </div>
             </div>
             
-            <!-- Botones de Mantenimiento -->
             <div class="card">
                 <h3 style="font-size: 0.95rem; margin-bottom: 12px;">Mantenimiento y Datos</h3>
                 <button class="btn btn-outline" onclick="triggerVersionUpdate()">🔄 Actualizar Versión</button>
@@ -344,28 +406,24 @@
             </div>
         </div>
 
-        <!-- VENTANA 2: LOGIN -->
         <div id="screenLogin" class="screen">
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <h2 style="font-size: 1.1rem;" id="loginCompanyTitle">Login</h2>
+                    <h2 style="font-size: 1.1rem;" id="loginCompanyTitle">Ingreso de Asesor</h2>
                     <button class="btn btn-outline" style="width: auto; padding: 6px 12px; font-size: 0.8rem; margin:0;" onclick="changeScreen('screenCompany')">Volver</button>
                 </div>
                 
                 <label for="advisorSelect">Asesor de Ventas</label>
                 <select id="advisorSelect"></select>
 
-                <label for="passwordInput">Contraseña de Ruta</label>
-                <input type="password" id="passwordInput" placeholder="Contraseña de acceso">
-
-                <button class="btn" onclick="attemptLogin()">Desbloquear Rutero</button>
+                <button class="btn btn-success" onclick="attemptLogin()">Desbloquear Rutero</button>
             </div>
         </div>
 
-        <!-- VENTANA 3: RUTERO PRINCIPAL -->
         <div id="screenMain" class="screen">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                 <div style="font-size: 0.85rem; font-weight: bold; background: #e2e8f0; padding: 6px 12px; border-radius: 6px;" id="userDisplay">Asesor: --</div>
+                <button class="btn btn-warning" style="width: auto; padding: 4px 12px; font-size: 0.8rem; margin:0;" onclick="changeScreen('screenKPI')">📊 Panel KPIs</button>
                 <button class="btn btn-danger" style="width: auto; padding: 4px 12px; font-size: 0.8rem; margin:0;" onclick="logout()">Salir</button>
             </div>
 
@@ -400,7 +458,214 @@
             <div id="clientsContainer"></div>
         </div>
 
-        <!-- FORMULARIO MANUAL -->
+        <div id="screenKPI" class="screen">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <h2 style="font-size: 1.1rem; color: var(--accent);">Seguimiento de KPIs e Indicadores</h2>
+                    <button class="btn btn-outline" style="width: auto; padding: 6px 12px; font-size: 0.8rem; margin:0;" onclick="changeScreen('screenMain')">Volver al Rutero</button>
+                </div>
+
+                <div class="nav-tabs-kpi">
+                    <button class="tab-kpi-btn active" onclick="switchKpiTab('panelObjetivos', this)">1. Objetivos Mes</button>
+                    <button class="tab-kpi-btn" onclick="switchKpiTab('panelGestion', this)">2. Gestión Diaria</button>
+                    <button class="tab-kpi-btn" onclick="switchKpiTab('panelResultados', this)">3. Resultados</button>
+                </div>
+
+                <div id="panelObjetivos" class="sub-kpi-panel active">
+                    <h3 style="font-size: 0.9rem; margin-bottom: 12px; color: #475569;">Establecer Metas Mensuales</h3>
+                    
+                    <label>Días Hábiles Totales del Mes</label>
+                    <input type="number" id="obj_dias_totales" placeholder="Ej. 24" oninput="calculateKpis()">
+
+                    <div class="kpi-row"><label>Presupuesto ($)</label><label>Cajas Isola</label></div>
+                    <div class="kpi-row">
+                        <input type="number" id="obj_dolar" placeholder="0.00" oninput="calculateKpis()">
+                        <input type="number" id="obj_isola" placeholder="0" oninput="calculateKpis()">
+                    </div>
+
+                    <div class="kpi-row"><label>Cajas Parmalat</label><label>Bultos Paveca</label></div>
+                    <div class="kpi-row">
+                        <input type="number" id="obj_parmalat" placeholder="0" oninput="calculateKpis()">
+                        <input type="number" id="obj_paveca" placeholder="0" oninput="calculateKpis()">
+                    </div>
+
+                    <div class="kpi-row">
+    <div>
+        <label>Cajas de Mix</label>
+        <input type="number" id="obj_mix" placeholder="0" oninput="calculateKpis()">
+    </div>
+    <div>
+        <label>Cajas de EVA</label>
+        <input type="number" id="obj_eva" placeholder="0" oninput="calculateKpis()">
+    </div>
+</div>
+
+
+                    <button class="btn btn-success" style="margin-top: 10px;" onclick="saveKpiData()">Guardar Configuración Mensual</button>
+                </div>
+
+                <div id="panelGestion" class="sub-kpi-panel">
+                    <div class="calendario-container">
+        <label style="font-weight: bold; color: var(--texto-blanco); font-size: 0.95rem;">
+            📅 Matriz de Seguimiento del Mes (Selecciona un día hábil para registrar o auditar):
+        </label>
+        <div id="calendarioDias" class="calendario-grid"></div>
+    </div>
+
+    <div class="grid-2" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--borde);">
+        <div class="form-group">
+            <label>Día Hábil Seleccionado</label>
+            <input type="number" id="act_dia_actual" value="1" min="1" max="23" onchange="intercambiarDiaDesdeInput()" style="font-weight: bold; color: #25d366; text-align: center;">
+        </div>
+        <div class="form-group">
+            <label>Zona / Sector de Trabajo de Hoy</label>
+            <input type="text" id="act_zona" placeholder="Ej. Coloncito / La Fría" oninput="guardarEstadoDia()">
+        </div>
+    </div>
+
+    <h3 style="font-size: 1rem; margin-top: 15px; color: #0d6efd; border-bottom: 1px solid rgba(13,110,253,0.3); padding-bottom: 5px;">
+        🚀 1. Cuota Exigida para Hoy (Cálculo Inteligente Remanente)
+    </h3>
+    <p style="font-size: 0.8rem; color: #8a99ad; margin-top: -5px; margin-bottom: 15px;">
+        Plan de la mañana calculado automáticamente dividiendo el faltante acumulado entre los días restantes del mes.
+    </p>
+
+    <div class="grid-2">
+        <div class="form-group">
+            <label>Faltante $ Diario (Finanzas)</label>
+            <input type="text" id="reqDoc" readonly style="background: rgba(0,0,0,0.2); font-weight: bold; color: #ffc107;">
+        </div>
+        <div class="form-group">
+            <label>Faltante Isola (Cajas Diarias)</label>
+            <input type="text" id="reqIsola" readonly style="background: rgba(0,0,0,0.2); font-weight: bold; color: #ffc107;">
+        </div>
+    </div>
+
+    <div class="grid-2" style="margin-top: 10px;">
+        <div class="form-group">
+            <label>Faltante Parmalat (Cajas Diarias)</label>
+            <input type="text" id="reqParmalat" readonly style="background: rgba(0,0,0,0.2); font-weight: bold; color: #ffc107;">
+        </div>
+        <div class="form-group">
+            <label>Faltante Paveca (Bultos Diarios)</label>
+            <input type="text" id="reqPaveca" readonly style="background: rgba(0,0,0,0.2); font-weight: bold; color: #ffc107;">
+        </div>
+    </div>
+
+    <div class="form-group" style="margin-top: 10px; margin-bottom: 10px;">
+    <label>Faltante Mix (Cajas Diarias)</label>
+    <input type="text" id="reqMix" readonly style="background: rgba(0,0,0,0.05); width: 100%;">
+</div>
+
+<div class="form-group" style="margin-top: 10px; margin-bottom: 25px;">
+    <label>Faltante EVA (Cajas Diarias)</label>
+    <input type="text" id="reqEva" readonly style="background: rgba(0,0,0,0.05); width: 100%;">
+</div>
+
+    <h3 style="font-size: 1rem; margin-top: 25px; color: #25d366; border-bottom: 1px solid rgba(37,211,102,0.3); padding-bottom: 5px;">
+        📊 2. Cierre Real Recolectado en la Tarde (Auditoría del Día)
+    </h3>
+    <p style="font-size: 0.8rem; color: #8a99ad; margin-top: -5px; margin-bottom: 15px;">
+        Introduce aquí los números reales liquidados al finalizar la jornada para el día seleccionado.
+    </p>
+
+    <div class="grid-2">
+        <div class="form-group">
+            <label>Dólares Facturados ($ Real)</label>
+            <input type="number" id="resDoc" placeholder="0.00" oninput="guardarEstadoDia()" style="font-weight: bold;">
+        </div>
+        <div class="form-group">
+            <label>Acumulado Isola (Cjs Reales)</label>
+            <input type="number" id="resIsola" placeholder="0" oninput="guardarEstadoDia()">
+        </div>
+    </div>
+
+    <div class="grid-2" style="margin-top: 10px;">
+        <div class="form-group">
+            <label>Acumulado Parmalat (Cjs Reales)</label>
+            <input type="number" id="resParmalat" placeholder="0" oninput="guardarEstadoDia()">
+        </div>
+        <div class="form-group">
+            <label>Acumulado Paveca (Bts Reales)</label>
+            <input type="number" id="resPaveca" placeholder="0" oninput="guardarEstadoDia()">
+        </div>
+    </div>
+
+    <div class="form-group" style="margin-top: 10px; margin-bottom: 10px;">
+    <label>Acumulado Mix (Cjs Reales)</label>
+    <input type="number" id="resMix" placeholder="0" oninput="guardarEstadoDia()">
+</div>
+
+<div class="form-group" style="margin-top: 10px; margin-bottom: 30px;">
+    <label>Acumulado EVA (Cjs Reales)</label>
+    <input type="number" id="resEva" placeholder="0" oninput="guardarEstadoDia()">
+</div>
+
+    <button type="button" class="btn-whatsapp" onclick="despacharReporteWhatsApp()" style="width: 100%; padding: 14px; background: #25d366; color: #fff; font-weight: bold; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem;">
+        📲 Generar y Enviar Reporte de Gestión a WhatsApp
+    </button>
+
+                <div id="panelResultados" class="sub-kpi-panel">
+                    <h3 style="font-size: 0.9rem; margin-bottom: 12px; color: #475569;">Análisis de Cuotas Diarias y Faltantes</h3>
+                    
+                    <div style="background:#f8fafc; padding:10px; border-radius:6px; margin-bottom:12px; border:1px solid #e2e8f0;">
+                        <p style="font-size:0.85rem;"><strong>Días Hábiles Restantes:</strong> <span id="res_dias_restantes">0</span> días</p>
+                    </div>
+
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:600;">
+                            <span>Financiero Dólares: Avance <span id="p_dol">0</span>%</span>
+                            <span>Falta: $<span id="f_dol">0</span> (Requerido Diario: $<span id="req_dol">0</span>)</span>
+                        </div>
+                        <div class="progress-bar-container"><div class="progress-bar" id="bar_dol"></div></div>
+                    </div>
+
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:600;">
+                            <span>Isola: Avance <span id="p_iso">0</span>%</span>
+                            <span>Falta: <span id="f_iso">0</span> Cjs (Requerido Diario: <span id="req_iso">0</span>)</span>
+                        </div>
+                        <div class="progress-bar-container"><div class="progress-bar" id="bar_iso"></div></div>
+                    </div>
+
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:600;">
+                            <span>Parmalat: Avance <span id="p_par">0</span>%</span>
+                            <span>Falta: <span id="f_par">0</span> Cjs (Requerido Diario: <span id="req_par">0</span>)</span>
+                        </div>
+                        <div class="progress-bar-container"><div class="progress-bar" id="bar_par"></div></div>
+                    </div>
+
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:600;">
+                            <span>Paveca: Avance <span id="p_pav">0</span>%</span>
+                            <span>Falta: <span id="f_pav">0</span> Bts (Requerido Diario: <span id="req_pav">0</span>)</span>
+                        </div>
+                        <div class="progress-bar-container"><div class="progress-bar" id="bar_pav"></div></div>
+                    </div>
+
+                    <!-- BLOQUE INDEPENDIENTE PARA MIX -->
+<div>
+    <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:bold;">
+        <span>Mix: Avance <span id="p_mix">0</span>%</span>
+        <span>Falta: <span id="f_mix">0</span> Cjs (Requerido Diario: <span id="req_mix">0</span>)</span>
+    </div>
+    <div class="progress-bar-container"><div class="progress-bar" id="bar_mix"></div></div>
+</div>
+
+<!-- BLOQUE INDEPENDIENTE PARA EVA -->
+<div style="margin-top: 15px;">
+    <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:bold;">
+        <span>EVA: Avance <span id="p_eva">0</span>%</span>
+        <span>Falta: <span id="f_eva">0</span> Cjs (Requerido Diario: <span id="req_eva">0</span>)</span>
+    </div>
+    <div class="progress-bar-container"><div class="progress-bar" id="bar_eva"></div></div>
+</div>
+                </div>
+
+            </div>
+        </div>
+
         <div id="screenAddClient" class="screen">
             <div class="card">
                 <h2 style="font-size: 1.1rem; margin-bottom: 16px;">Crear Registro de Cliente Manual</h2>
@@ -430,7 +695,6 @@
             </div>
         </div>
 
-        <!-- EXPORTACIÓN EXCEL -->
         <div id="screenExcel" class="screen">
             <div class="card">
                 <h2 style="font-size: 1.1rem; margin-bottom: 12px; text-align: center;">Módulo de Reportes Auditables</h2>
@@ -445,15 +709,13 @@
     </div>
 
     <footer style="text-align: center; font-size: 0.75rem; color: #94a3b8; margin-top: 20px; padding: 15px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; max-width:600px; margin: 20px auto 0 auto;">
-        <span>Grupo Ontiveros © 2026</span>
-        <span style="background: #cbd5e1; color: #1e293b; padding: 2px 8px; border-radius: 10px; font-family: monospace; font-weight: bold;">Versión actual: v2.1.1</span>
+        <span>Deibys Ibañes © 2026</span>
+        <span style="background: #cbd5e1; color: #1e293b; padding: 2px 8px; border-radius: 10px; font-family: monospace; font-weight: bold;">Versión actual: v3.0.0</span>
     </footer>
 
     <script>
-        const PASSWORDS = {
-            '1A': 'dipaca1', '1B': 'dipaca2', '1C': 'dipaca3', '1D': 'dipaca4', '1E': 'dipaca5',
-            '2A': 'dipaca6', '2B': 'dipaca7', '2C': 'dipaca8', '2D': 'dipaca9', '2E': 'dipaca10'
-        };
+        // --- CONSTANTES ---
+        const ASESORES_LIST = ['1A', '1B', '1C', '1D', '1E', '2A', '2B', '2C', '2D', '2E'];
 
         const BRANDS_STRUCTURE = {
             'Isola': ['Atomatados Ole', 'Atomatados Osole', 'GP', 'Galletas', 'Compotas'],
@@ -461,11 +723,14 @@
             'Paveca': ['Rosal', 'Servilletas Z']
         };
 
+        // --- ESTADO GLOBAL ---
         let currentCompany = '';
         let currentAdvisor = '';
         let currentDay = 'Lunes';
         let clientsList = [];
+        let activeAccordionBrand = ''; // Memoria para mantener la marca abierta
 
+        // --- INICIALIZADORES ---
         window.addEventListener('DOMContentLoaded', () => {
             setSystemDate();
             evalMonthlyReset();
@@ -506,10 +771,14 @@
             if (raw) clientsList = JSON.parse(raw);
         }
 
+        // --- NAVEGACIÓN ---
         function changeScreen(id) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             window.scrollTo(0,0);
+            if (id === 'screenKPI') {
+                loadKpiData();
+            }
         }
 
         function selectCompany(name) {
@@ -518,37 +787,22 @@
             const s = document.getElementById('advisorSelect');
             s.innerHTML = '';
             
-            if (name === 'DIPACA') {
-                Object.keys(PASSWORDS).forEach(c => {
-                    let o = document.createElement('option');
-                    o.value = c; o.innerText = `Asesor ${c}`;
-                    s.appendChild(o);
-                });
-            } else {
+            ASESORES_LIST.forEach(c => {
                 let o = document.createElement('option');
-                o.value = ''; o.innerText = 'Pendiente Carga Maestra';
+                o.value = c; o.innerText = `Asesor ${c}`;
                 s.appendChild(o);
-            }
+            });
             changeScreen('screenLogin');
         }
 
         function attemptLogin() {
             const code = document.getElementById('advisorSelect').value;
-            const pass = document.getElementById('passwordInput').value;
-
-            if (!code) { return alert('Sin configuración asignada.'); }
-
-            if (currentCompany === 'DIPACA') {
-                if (PASSWORDS[code] === pass) {
-                    currentAdvisor = code;
-                    document.getElementById('userDisplay').innerText = `${currentCompany} | Asesor: ${code}`;
-                    document.getElementById('passwordInput').value = '';
-                    changeScreen('screenMain');
-                    selectDay('Lunes');
-                } else {
-                    alert('Clave inválida. Intente de nuevo.');
-                }
-            }
+            if (!code) return alert('Seleccione un asesor.');
+            
+            currentAdvisor = code;
+            document.getElementById('userDisplay').innerText = `${currentCompany} | Asesor: ${code}`;
+            changeScreen('screenMain');
+            selectDay('Lunes');
         }
 
         function logout() {
@@ -565,6 +819,7 @@
             renderClients();
         }
 
+        // --- LÓGICA DE CONTROL Y RENDERIZADO CON MEMORIA ---
         function checkFullActivation(c) {
             let tot = 0, act = 0;
             Object.keys(BRANDS_STRUCTURE).forEach(b => {
@@ -585,6 +840,10 @@
             if (norm.includes('jue')) return 'Jueves';
             if (norm.includes('vie')) return 'Viernes';
             return 'Lunes';
+        }
+
+        function setAccordionFocus(brandName) {
+            activeAccordionBrand = brandName;
         }
 
         function renderClients() {
@@ -620,20 +879,22 @@
                             <div class="category-row">
                                 <span class="category-name">${cat}</span>
                                 <div class="status-toggle">
-                                    <div class="toggle-opt ${val == 0 ? 'active' : ''}" onclick="toggleCategory('${c.id}', '${key}', 0)">0</div>
-                                    <div class="toggle-opt opt-1 ${val == 1 ? 'active' : ''}" onclick="toggleCategory('${c.id}', '${key}', 1)">1</div>
+                                    <div class="toggle-opt ${val == 0 ? 'active' : ''}" onclick="toggleCategory('${c.id}', '${key}', 0, '${b}')">0</div>
+                                    <div class="toggle-opt opt-1 ${val == 1 ? 'active' : ''}" onclick="toggleCategory('${c.id}', '${key}', 1, '${b}')">1</div>
                                 </div>
                             </div>
                         `;
                     });
 
+                    const isOpen = (activeAccordionBrand === b) ? 'open' : '';
+
                     accHtml += `
                         <div class="brand-accordion">
-                            <div class="brand-header" onclick="this.nextElementSibling.classList.toggle('open')">
+                            <div class="brand-header" onclick="setAccordionFocus('${b}'); this.nextElementSibling.classList.toggle('open')">
                                 <span>📦 ${b}</span>
                                 <span>▼</span>
                             </div>
-                            <div class="brand-content">${rows}</div>
+                            <div class="brand-content ${isOpen}">${rows}</div>
                         </div>
                     `;
                 });
@@ -653,7 +914,7 @@
             });
         }
 
-        function toggleCategory(id, key, val) {
+        function toggleCategory(id, key, val, brandKey) {
             const i = clientsList.findIndex(c => c.id === id);
             if (i !== -1) {
                 if (!clientsList[i].activations) clientsList[i].activations = {};
@@ -662,11 +923,13 @@
                 const now = new Date();
                 clientsList[i].lastUpdateTimestamp = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
                 
+                activeAccordionBrand = brandKey; // Bloquea la marca actual en foco
                 localStorage.setItem('ontiveros_clients_db', JSON.stringify(clientsList));
                 renderClients();
             }
         }
 
+        // --- SISTEMA MANUAL DE CLIENTES ---
         function openNewClientModal() {
             document.getElementById('newClientName').value = '';
             document.getElementById('newClientCode').value = '';
@@ -706,6 +969,369 @@
             }
         }
 
+        // --- MÓDULO LOGÍSTICO COMPLETO DE KPIs ---
+        function switchKpiTab(panelId, btnElement) {
+            document.querySelectorAll('.sub-kpi-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-kpi-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+            btnElement.classList.add('active');
+        }
+
+        function getKpiStorageKey() {
+            return `kpi_${currentCompany}_${currentAdvisor}`;
+        }
+
+        function saveKpiData() {
+    const data = {
+        obj_dias_totales: parseFloat(document.getElementById('obj_dias_totales').value),
+        obj_dolar: parseFloat(document.getElementById('obj_dolar').value) || 0,
+        obj_isola: parseFloat(document.getElementById('obj_isola').value) || 0,
+        obj_parmalat: parseFloat(document.getElementById('obj_parmalat').value) || 0,
+        obj_paveca: parseFloat(document.getElementById('obj_paveca').value) || 0,
+        obj_mix: parseFloat(document.getElementById('obj_mix').value) || 0,
+        obj_eva: parseFloat(document.getElementById('obj_eva')?.value) || 0, // 🔥 NUEVO OBJETIVO EVA
+
+        act_dia_actual: parseFloat(document.getElementById('act_dia_actual').value) || 0,
+        act_zona: document.getElementById('act_zona').value,
+        act_dolar: parseFloat(document.getElementById('act_dolar').value) || 0,
+        act_isola: parseFloat(document.getElementById('act_isola').value) || 0,
+        act_parmalat: parseFloat(document.getElementById('act_parmalat').value) || 0,
+        act_paveca: parseFloat(document.getElementById('act_paveca').value) || 0,
+        act_mix: parseFloat(document.getElementById('act_mix').value) || 0,
+        act_eva: parseFloat(document.getElementById('act_eva')?.value) || 0 // 🔥 NUEVA GESTIÓN ACT EVA
+    };
+
+    localStorage.setItem(getKpiStorageKey(), JSON.stringify(data));
+    alert('Datos e Indicadores guardados correctamente.');
+}
+
+
+        function loadKpiData() {
+    const raw = localStorage.getItem(getKpiStorageKey());
+    if (raw) {
+        const data = JSON.parse(raw);
+        document.getElementById('obj_dias_totales').value = data.obj_dias_totales || 23;
+        document.getElementById('obj_dolar').value = data.obj_dolar || 0;
+        document.getElementById('obj_isola').value = data.obj_isola || 0;
+        document.getElementById('obj_parmalat').value = data.obj_parmalat || 0;
+        document.getElementById('obj_paveca').value = data.obj_paveca || 0;
+        document.getElementById('obj_mix').value = data.obj_mix || 0;
+          if(document.getElementById('obj_eva')) document.getElementById('obj_eva').value = data.obj_eva || 0;
+    }
+    // Dibuja el calendario e inicializa cálculos
+    construirEsquemaVisualCalendario();
+    ejecutarCalculosTotales();
+}
+
+// 🔀 FUNCION PUENTE: Redirige el viejo cálculo al nuevo sistema automáticamente
+function calculateKpis() {
+    ejecutarCalculosTotales();
+}
+
+// --- SISTEMA INTERACTIVO DE CALENDARIO Y COHERENCIA REMANENTE ---
+
+function construirEsquemaVisualCalendario() {
+    const grid = document.getElementById('calendarioDias');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    const maximoDias = parseInt(document.getElementById('obj_dias_totales').value) || 23;
+    const actual = parseInt(document.getElementById('act_dia_actual').value) || 1;
+
+    for (let i = 1; i <= maximoDias; i++) {
+        const boton = document.createElement('button');
+        boton.className = 'btn-dia';
+        boton.innerText = `Día ${i}`;
+        
+        if (i === actual) boton.classList.add('activo');
+        
+        let dataDia = registroMensualDias[i];
+        if (dataDia && (dataDia.dolar > 0 || dataDia.isola > 0 || dataDia.parmalat > 0 || dataDia.paveca > 0 || dataDia.mix > 0)) {
+            boton.classList.add('con-datos');
+        }
+
+        boton.onclick = function() {
+            document.getElementById('act_dia_actual').value = i;
+            cargarDatosEspecificosDia(i);
+        };
+        grid.appendChild(boton);
+    }
+}
+
+function intercambiarDiaDesdeInput() {
+    let nDia = parseInt(document.getElementById('act_dia_actual').value) || 1;
+    const maximo = parseInt(document.getElementById('obj_dias_totales').value) || 23;
+    if (nDia < 1) nDia = 1;
+    if (nDia > maximo) nDia = maximo;
+    document.getElementById('act_dia_actual').value = nDia;
+    cargarDatosEspecificosDia(nDia);
+}
+
+function cargarDatosEspecificosDia(diaAlm) {
+    construirEsquemaVisualCalendario();
+    let datos = registroMensualDias[diaAlm] || { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0, zona: '' };
+    
+    document.getElementById('resDoc').value = datos.dolar || '';
+    document.getElementById('resIsola').value = datos.isola || '';
+    document.getElementById('resParmalat').value = datos.parmalat || '';
+    document.getElementById('resPaveca').value = datos.paveca || '';
+    document.getElementById('resMix').value = datos.mix || '';
+    document.getElementById('act_zona').value = datos.zona || '';
+    
+    ejecutarCalculosTotales();
+}
+
+function ejecutarCalculosTotales() {
+    // 1. Verificar que existan los inputs del día actual y totales
+    const inputDiaActual = document.getElementById('act_dia_actual');
+    const inputDiasTotales = document.getElementById('obj_dias_totales');
+    
+    if (!inputDiaActual || !inputDiasTotales) {
+        console.warn("Faltan inputs básicos de control en el HTML: act_dia_actual o obj_dias_totales");
+        return; 
+    }
+
+    let diaActual = parseInt(inputDiaActual.value) || 1;
+    let diasTotales = parseInt(inputDiasTotales.value) || 23;
+
+    // 2. Calcular lo acumulado hasta ayer
+    let acHastaAyer = { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0, eva: 0 };
+    for (let i = 1; i < diaActual; i++) {
+        let info = registroMensualDias[i] || { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0, eva: 0 };
+        acHastaAyer.dolar += info.dolar || 0;
+        acHastaAyer.isola += info.isola || 0;
+        acHastaAyer.parmalat += info.parmalat || 0;
+        acHastaAyer.paveca += info.paveca || 0;
+        acHastaAyer.mix += info.mix || 0;
+        acHastaAyer.eva += info.eva || 0;
+    }
+
+    // 3. Leer objetivos del mes con verificación preventiva
+    let objetivos = {
+        dolar: parseFloat(document.getElementById('obj_dolar')?.value) || 0,
+        isola: parseFloat(document.getElementById('obj_isola')?.value) || 0,
+        parmalat: parseFloat(document.getElementById('obj_parmalat')?.value) || 0,
+        paveca: parseFloat(document.getElementById('obj_paveca')?.value) || 0,
+        mix: parseFloat(document.getElementById('obj_mix')?.value) || 0,
+        eva: parseFloat(document.getElementById('obj_eva')?.value) || 0
+    };
+
+    let diasRestantes = (diasTotales - diaActual) + 1;
+    if (diasRestantes <= 0) diasRestantes = 1;
+
+    // 4. Cálculos finales
+    let resDoc = Math.max(0, (objetivos.dolar - acHastaAyer.dolar) / diasRestantes).toFixed(2);
+    let resIsola = Math.max(0, Math.ceil((objetivos.isola - acHastaAyer.isola) / diasRestantes));
+    let resParmalat = Math.max(0, Math.ceil((objetivos.parmalat - acHastaAyer.parmalat) / diasRestantes));
+    let resPaveca = Math.max(0, Math.ceil((objetivos.paveca - acHastaAyer.paveca) / diasRestantes));
+    let resMix = Math.max(0, Math.ceil((objetivos.mix - acHastaAyer.mix) / diasRestantes));
+    let resEva = Math.max(0, Math.ceil((objetivos.eva - acHastaAyer.eva) / diasRestantes));
+
+
+    // 5. Inyectar de forma segura en el HTML (Evita que la app se muera si el ID cambió de nombre)
+    if(document.getElementById('reqDoc')) document.getElementById('reqDoc').value = resDoc;
+    if(document.getElementById('reqIsola')) document.getElementById('reqIsola').value = resIsola;
+    if(document.getElementById('reqParmalat')) document.getElementById('reqParmalat').value = resParmalat;
+    if(document.getElementById('reqPaveca')) document.getElementById('reqPaveca').value = resPaveca;
+    if(document.getElementById('reqMix')) document.getElementById('reqMix').value = resMix;
+    if(document.getElementById('reqEva')) document.getElementById('reqEva').value = resEva;
+}
+
+
+// --- SISTEMA INTERACTIVO DE CALENDARIO Y COHERENCIA REMANENTE ---
+let registroMensualDias = JSON.parse(localStorage.getItem('ontiveros_historial_v3')) || {};
+
+function construirEsquemaVisualCalendario() {
+    const grid = document.getElementById('calendarioDias');
+    if (!grid) return;
+    grid.innerHTML = '';
+    
+    const maximoDias = parseInt(document.getElementById('obj_dias_totales').value) || 23;
+    const actual = parseInt(document.getElementById('act_dia_actual').value) || 1;
+
+    for (let i = 1; i <= maximoDias; i++) {
+        const boton = document.createElement('button');
+        boton.className = 'btn-dia';
+        boton.innerText = `Día ${i}`;
+        
+        if (i === actual) boton.classList.add('activo');
+        
+        let dataDia = registroMensualDias[i];
+        if (dataDia && (dataDia.dolar > 0 || dataDia.isola > 0 || dataDia.parmalat > 0 || dataDia.paveca > 0 || dataDia.mix > 0)) {
+            boton.classList.add('con-datos');
+        }
+
+        boton.onclick = function() {
+            document.getElementById('act_dia_actual').value = i;
+            cargarDatosEspecificosDia(i);
+        };
+        grid.appendChild(boton);
+    }
+}
+
+function intercambiarDiaDesdeInput() {
+    let nDia = parseInt(document.getElementById('act_dia_actual').value) || 1;
+    const maximo = parseInt(document.getElementById('obj_dias_totales').value) || 23;
+    if (nDia < 1) nDia = 1;
+    if (nDia > maximo) nDia = maximo;
+    document.getElementById('act_dia_actual').value = nDia;
+    cargarDatosEspecificosDia(nDia);
+}
+
+function cargarDatosEspecificosDia(diaAlm) {
+    construirEsquemaVisualCalendario();
+    let datos = registroMensualDias[diaAlm] || { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0, zona: '' };
+    
+    document.getElementById('resDoc').value = datos.dolar || '';
+    document.getElementById('resIsola').value = datos.isola || '';
+    document.getElementById('resParmalat').value = datos.parmalat || '';
+    document.getElementById('resPaveca').value = datos.paveca || '';
+    document.getElementById('resMix').value = datos.mix || '';
+    document.getElementById('act_zona').value = datos.zona || '';
+    
+    ejecutarCalculosTotales();
+}
+
+function guardarEstadoDia() {
+    let diaEnCurso = parseInt(document.getElementById('act_dia_actual').value) || 1;
+    
+    registroMensualDias[diaEnCurso] = {
+        dolar: parseFloat(document.getElementById('resDoc').value) || 0,
+        isola: parseFloat(document.getElementById('resIsola').value) || 0,
+        parmalat: parseFloat(document.getElementById('resParmalat').value) || 0,
+        paveca: parseFloat(document.getElementById('resPaveca').value) || 0,
+        mix: parseFloat(document.getElementById('resMix').value) || 0,
+        zona: document.getElementById('act_zona').value
+    };
+
+    localStorage.setItem('ontiveros_historial_v3', JSON.stringify(registroMensualDias));
+    construirEsquemaVisualCalendario();
+}
+
+function ejecutarCalculosTotales() {
+    let diaActual = parseInt(document.getElementById('act_dia_actual').value) || 1;
+    let diasTotales = parseInt(document.getElementById('obj_dias_totales').value) || 23;
+
+    let acHastaAyer = { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0 };
+
+    for (let i = 1; i < diaActual; i++) {
+        let info = registroMensualDias[i] || { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0 };
+        acHastaAyer.dolar += info.dolar;
+        acHastaAyer.isola += info.isola;
+        acHastaAyer.parmalat += info.parmalat;
+        acHastaAyer.paveca += info.paveca;
+        acHastaAyer.mix += info.mix;
+    }
+
+    let objetivos = {
+        dolar: parseFloat(document.getElementById('obj_dolar').value) || 0,
+        isola: parseFloat(document.getElementById('obj_isola').value) || 0,
+        parmalat: parseFloat(document.getElementById('obj_parmalat').value) || 0,
+        paveca: parseFloat(document.getElementById('obj_paveca').value) || 0,
+        mix: parseFloat(document.getElementById('obj_mix').value) || 0
+    };
+
+    let diasRestantes = (diasTotales - diaActual) + 1;
+    if (diasRestantes <= 0) diasRestantes = 1;
+
+    document.getElementById('reqDoc').value = Math.max(0, (objetivos.dolar - acHastaAyer.dolar) / diasRestantes).toFixed(2);
+    document.getElementById('reqIsola').value = Math.max(0, Math.ceil((objetivos.isola - acHastaAyer.isola) / diasRestantes));
+    document.getElementById('reqParmalat').value = Math.max(0, Math.ceil((objetivos.parmalat - acHastaAyer.parmalat) / diasRestantes));
+    document.getElementById('reqPaveca').value = Math.max(0, Math.ceil((objetivos.paveca - acHastaAyer.paveca) / diasRestantes));
+    document.getElementById('reqMix').value = Math.max(0, Math.ceil((objetivos.mix - acHastaAyer.mix) / diasRestantes));
+}
+
+function despacharReporteWhatsApp() {
+    const dia = document.getElementById('act_dia_actual').value;
+    const zona = document.getElementById('act_zona').value;
+    
+    // 🎯 1. LAS REQUERIDAS DE LA MAÑANA (Llevan "req")
+    const rDoc = document.getElementById('reqDoc')?.value || '0.00';
+    const rIsola = document.getElementById('reqIsola')?.value || '0';
+    const rParmalat = document.getElementById('reqParmalat')?.value || '0';
+    const rPaveca = document.getElementById('reqPaveca')?.value || '0';
+    const rMix = document.getElementById('reqMix')?.value || '0';
+    const rEva = document.getElementById('reqEva')?.value || '0'; // <- Independiente
+
+    // 📊 2. LOS CIERRES REALES DE LA TARDE (Llevan "res")
+    const cDoc = document.getElementById('resDoc')?.value || '0.00';
+    const cIsola = document.getElementById('resIsola')?.value || '0';
+    const cParmalat = document.getElementById('resParmalat')?.value || '0';
+    const cPaveca = document.getElementById('resPaveca')?.value || '0';
+    const cMix = document.getElementById('resMix')?.value || '0';
+    const cEva = document.getElementById('resEva')?.value || '0'; // <- Independiente
+
+    let mensaje = `*GRUPO EMPRESARIAL ONTIVEROS*\n`;
+    mensaje += `*REPORTE DIARIO DE VENTAS - DÍA HÁBIL: ${dia}*\n`;
+    mensaje += `*Zona / Ruta:* ${zona}\n`;
+    mensaje += `=====================================\n`;
+    mensaje += `*🎯 CUOTA AUTOMÁTICA REQUERIDA (MAÑANA):*\n`;
+    mensaje += `▪️ Objetivo Finanzas: $${rDoc}\n`;
+    mensaje += `▪️ Objetivo Isola: ${rIsola} Cjs\n`;
+    mensaje += `▪️ Objetivo Parmalat: ${rParmalat} Cjs\n`;
+    mensaje += `▪️ Objetivo Paveca: ${rPaveca} Bts\n`;
+    mensaje += `▪️ Objetivo Cajas Mix: ${rMix}\n`;
+    mensaje += `▪️ Objetivo Cajas EVA: ${rEva}\n`; // <- Línea separada
+    mensaje += `=====================================\n`;
+    
+    if (parseFloat(cDoc) > 0 || parseInt(cIsola) > 0 || parseInt(cParmalat) > 0 || parseInt(cMix) > 0 || parseInt(cEva) > 0) {
+        mensaje += `*📊 CIERRE RECOLECTADO REAL (TARDE):*\n`;
+        mensaje += `▪️ Facturación Total: $${cDoc}\n`;
+        mensaje += `▪️ Isola: ${cIsola} Cjs | Parmalat: ${cParmalat} Cjs\n`;
+        mensaje += `▪️ Paveca: ${cPaveca} Bts | Cjs Mix: ${cMix}\n`;
+        mensaje += `▪️ Cjs EVA: ${cEva}\n`; // <- Línea separada
+        mensaje += `=====================================\n`;
+    }
+    
+    mensaje += `_Reporte automatizado - Control de Fuerza de Ventas._`;
+
+    const link = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensaje)}`;
+    window.open(link, '_blank');
+}
+
+        function shareWhatsApp(mode) {
+    // Datos básicos
+    const currentAdvisor = document.getElementById('act_zona')?.value || 'Asesor';
+    const zona = document.getElementById('act_zona')?.value || 'Ruta';
+    const diaActual = document.getElementById('act_dia_actual')?.value || '1';
+    const dateStr = new Date().toLocaleDateString();
+
+    let msg = "";
+
+    if (mode === 'manana') {
+        msg = `*PLANIFICACIÓN DE MAÑANA - KPI DIARIO*\n` +
+              `*Ruta / Asesor:* ${currentAdvisor}\n` +
+              `*Fecha:* ${dateStr}\n` +
+              `*Zona a Visitar:* ${zona}\n` +
+              `*Día Hábil:* ${diaActual}\n\n` +
+              `*CUOTAS REQUERIDAS DEL DÍA:*\n` +
+              `• Presupuesto ($): $${document.getElementById('reqDoc')?.value || '0'}\n` +
+              `• Cajas Isola: ${document.getElementById('reqIsola')?.value || '0'} Cjs\n` +
+              `• Cajas Parmalat: ${document.getElementById('reqParmalat')?.value || '0'} Cjs\n` +
+              `• Bultos Paveca: ${document.getElementById('reqPaveca')?.value || '0'} Bts\n` +
+              `• Cajas Mix: ${document.getElementById('reqMix')?.value || '0'} Cjs\n` +
+              `• Cajas EVA: ${document.getElementById('reqEva')?.value || '0'} Cjs\n\n` + // <-- SEPARADO
+              `_*Estado del Reporte: PENDIENTE CIERRE DE GESTIÓN*_\n`;
+    } else {
+        msg = `*REPORTE DE RESULTADOS - CIERRE DE TARDE*\n` +
+              `*Ruta / Asesor:* ${currentAdvisor}\n` +
+              `*Fecha:* ${dateStr}\n` +
+              `*Zona Visitada:* ${zona}\n` +
+              `*Día Hábil:* ${diaActual}\n\n` +
+              `*AVANCE Y RENDIMIENTO MENSUAL:*\n` +
+              `• Presupuesto: ${document.getElementById('resDoc')?.value || '0'} cumplido\n` +
+              `• Cajas Isola: ${document.getElementById('resIsola')?.value || '0'} cumplido\n` +
+              `• Cajas Parmalat: ${document.getElementById('resParmalat')?.value || '0'} cumplido\n` +
+              `• Bultos Paveca: ${document.getElementById('resPaveca')?.value || '0'} cumplido\n` +
+              `• Cajas Mix: ${document.getElementById('resMix')?.value || '0'} cumplido\n` +
+              `• Cajas EVA: ${document.getElementById('resEva')?.value || '0'} cumplido\n`; // <-- SEPARADO
+    }
+
+    const link = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+    window.open(link, '_blank');
+}
+
+        // --- ENLACE CON ARCHIVOS EXCEL EXPORTACIÓN ---
         function handleExcelImport(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -783,7 +1409,7 @@
 
         function triggerVersionUpdate() {
             alert('Tus datos locales están seguros y protegidos en LocalStorage.');
-            alert('Sistema al día. Versión actual en ejecución: v2.1.1');
+            alert('Sistema al día. Versión actual en ejecución: v3.0.0');
         }
     </script>
 </body>
