@@ -371,7 +371,16 @@
 .btn-dia.con-datos { border-bottom: 4px solid #25d366; }
 
     </style>
-</head>
+    <style>
+  /* Fuerza a que los números de los faltantes diarios se vean en negro intenso */
+  #reqDoc, #reqIsola, #reqParmalat, #reqPaveca, #reqMix, #reqEva {
+    color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important; /* Para asegurar el color en Chrome y Edge */
+    opacity: 1 !important; /* Quita la transparencia difuminada */
+    font-weight: bold !important; /* De paso los hace resaltar un poquito más */
+  }
+</style>
+    </head>
 <body>
 
     <header>
@@ -466,9 +475,10 @@
                 </div>
 
                 <div class="nav-tabs-kpi">
-                    <button class="tab-kpi-btn active" onclick="switchKpiTab('panelObjetivos', this)">1. Objetivos Mes</button>
-                    <button class="tab-kpi-btn" onclick="switchKpiTab('panelGestion', this)">2. Gestión Diaria</button>
-                    <button class="tab-kpi-btn" onclick="switchKpiTab('panelResultados', this)">3. Resultados</button>
+                    <button class="tab-kpi-btn active" onclick="switchKpiTab('panelObjetivos', this); ejecutarCalculosTotales();">1. Objetivos Mes</button>
+<button class="tab-kpi-btn" onclick="switchKpiTab('panelGestion', this); ejecutarCalculosTotales();">2. Gestión Diaria</button>
+<button class="tab-kpi-btn" onclick="switchKpiTab('panelResultados', this); ejecutarCalculosTotales();">3. Resultados</button>
+
                 </div>
 
                 <div id="panelObjetivos" class="sub-kpi-panel active">
@@ -511,6 +521,67 @@
         </label>
         <div id="calendarioDias" class="calendario-grid"></div>
     </div>
+<div id="panelResultados" class="sub-kpi-panel">
+    <h3 style="font-size: 1rem; margin-top: 15px; color: #0d6efd; border-bottom: 1px solid rgba(13,110,253,0.3); padding-bottom: 5px;">
+        🚀 3. Avance General de Ventas del Mes
+    </h3>
+    
+    <div class="grid-2" style="margin-top: 15px;">
+        <div class="form-group">
+            <label style="font-weight: bold;">Efectividad Isola</label>
+            <div style="background: rgba(255,255,255,0.1); width: 100%; height: 22px; border-radius: 5px; overflow: hidden; margin-top: 5px; border: 1px solid var(--borde);">
+                <div id="bar_iso" style="background: #0d6efd; width: 0%; height: 100%; transition: width 0.5s;"></div>
+            </div>
+            <p style="font-size: 0.85rem; color: #8a99ad; margin-top: 4px;">
+                Progreso: <span id="p_isola" style="font-weight: bold; color: #ffc107;">0%</span> | Faltan <span id="f_isola" style="font-weight: bold; color: #fff;">0</span> Cajas
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label style="font-weight: bold;">Efectividad Parmalat</label>
+            <div style="background: rgba(255,255,255,0.1); width: 100%; height: 22px; border-radius: 5px; overflow: hidden; margin-top: 5px; border: 1px solid var(--borde);">
+                <div id="bar_par" style="background: #198754; width: 0%; height: 100%; transition: width 0.5s;"></div>
+            </div>
+            <p style="font-size: 0.85rem; color: #8a99ad; margin-top: 4px;">
+                Progreso: <span id="p_par" style="font-weight: bold; color: #ffc107;">0%</span> | Faltan <span id="f_par" style="font-weight: bold; color: #fff;">0</span> Cajas
+            </p>
+        </div>
+    </div>
+
+    <div class="grid-2" style="margin-top: 15px;">
+        <div class="form-group">
+            <label style="font-weight: bold;">Efectividad Paveca</label>
+            <div style="background: rgba(255,255,255,0.1); width: 100%; height: 22px; border-radius: 5px; overflow: hidden; margin-top: 5px; border: 1px solid var(--borde);">
+                <div id="bar_pav" style="background: #ffc107; width: 0%; height: 100%; transition: width 0.5s;"></div>
+            </div>
+            <p style="font-size: 0.85rem; color: #8a99ad; margin-top: 4px;">
+                Progreso: <span id="p_pav" style="font-weight: bold; color: #fff;">0%</span> | Faltan <span id="f_pav" style="font-weight: bold; color: #fff;">0</span> Bultos
+            </p>
+        </div>
+
+        <div class="form-group">
+            <label style="font-weight: bold;">Efectividad Mix</label>
+            <div style="background: rgba(255,255,255,0.1); width: 100%; height: 22px; border-radius: 5px; overflow: hidden; margin-top: 5px; border: 1px solid var(--borde);">
+                <div id="bar_mix" style="background: #dc3545; width: 0%; height: 100%; transition: width 0.5s;"></div>
+            </div>
+            <p style="font-size: 0.85rem; color: #8a99ad; margin-top: 4px;">
+                Progreso: <span id="p_mix" style="font-weight: bold; color: #ffc107;">0%</span> | Faltan <span id="f_mix" style="font-weight: bold; color: #fff;">0</span> Cajas
+            </p>
+        </div>
+    </div>
+
+    <div class="grid-2" style="margin-top: 15px;">
+        <div class="form-group">
+            <label style="font-weight: bold;">Efectividad Eva</label>
+            <div style="background: rgba(255,255,255,0.1); width: 100%; height: 22px; border-radius: 5px; overflow: hidden; margin-top: 5px; border: 1px solid var(--borde);">
+                <div id="bar_eva" style="background: #0dcaf0; width: 0%; height: 100%; transition: width 0.5s;"></div>
+            </div>
+            <p style="font-size: 0.85rem; color: #8a99ad; margin-top: 4px;">
+                Progreso: <span id="p_eva" style="font-weight: bold; color: #ffc107;">0%</span> | Faltan <span id="f_eva" style="font-weight: bold; color: #fff;">0</span> Unidades
+            </p>
+        </div>
+    </div>
+</div>
 
     <div class="grid-2" style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid var(--borde);">
         <div class="form-group">
@@ -714,6 +785,8 @@
     </footer>
 
     <script>
+        var registroMensualDias = JSON.parse(localStorage.getItem('ontiveros_historial_v3')) || {};
+
         // --- CONSTANTES ---
         const ASESORES_LIST = ['1A', '1B', '1C', '1D', '1E', '2A', '2B', '2C', '2D', '2E'];
 
@@ -982,29 +1055,30 @@
         }
 
         function saveKpiData() {
+    // Blindamos la lectura de los objetivos usando ?.value por si no están en la pestaña actual
     const data = {
-        obj_dias_totales: parseFloat(document.getElementById('obj_dias_totales').value),
-        obj_dolar: parseFloat(document.getElementById('obj_dolar').value) || 0,
-        obj_isola: parseFloat(document.getElementById('obj_isola').value) || 0,
-        obj_parmalat: parseFloat(document.getElementById('obj_parmalat').value) || 0,
-        obj_paveca: parseFloat(document.getElementById('obj_paveca').value) || 0,
-        obj_mix: parseFloat(document.getElementById('obj_mix').value) || 0,
-        obj_eva: parseFloat(document.getElementById('obj_eva')?.value) || 0, // 🔥 NUEVO OBJETIVO EVA
+        obj_dias_totales: parseFloat(document.getElementById('obj_dias_totales')?.value) || 23,
+        obj_dolar: parseFloat(document.getElementById('obj_dolar')?.value) || 0,
+        obj_isola: parseFloat(document.getElementById('obj_isola')?.value) || 0,
+        obj_parmalat: parseFloat(document.getElementById('obj_parmalat')?.value) || 0,
+        obj_paveca: parseFloat(document.getElementById('obj_paveca')?.value) || 0,
+        obj_mix: parseFloat(document.getElementById('obj_mix')?.value) || 0,
+        obj_eva: parseFloat(document.getElementById('obj_eva')?.value) || 0,
 
-        act_dia_actual: parseFloat(document.getElementById('act_dia_actual').value) || 0,
-        act_zona: document.getElementById('act_zona').value,
-        act_dolar: parseFloat(document.getElementById('act_dolar').value) || 0,
-        act_isola: parseFloat(document.getElementById('act_isola').value) || 0,
-        act_parmalat: parseFloat(document.getElementById('act_parmalat').value) || 0,
-        act_paveca: parseFloat(document.getElementById('act_paveca').value) || 0,
-        act_mix: parseFloat(document.getElementById('act_mix').value) || 0,
-        act_eva: parseFloat(document.getElementById('act_eva')?.value) || 0 // 🔥 NUEVA GESTIÓN ACT EVA
+        // Blindamos también la lectura de las casillas de gestión diaria
+        act_dia_actual: parseFloat(document.getElementById('act_dia_actual')?.value) || 1,
+        act_zona: document.getElementById('act_zona')?.value || "",
+        act_dolar: parseFloat(document.getElementById('resDoc')?.value) || 0,
+        act_isola: parseFloat(document.getElementById('resIsola')?.value) || 0,
+        act_parmalat: parseFloat(document.getElementById('resParmalat')?.value) || 0,
+        act_paveca: parseFloat(document.getElementById('resPaveca')?.value) || 0,
+        act_mix: parseFloat(document.getElementById('resMix')?.value) || 0,
+        act_eva: parseFloat(document.getElementById('resEva')?.value) || 0
     };
 
     localStorage.setItem(getKpiStorageKey(), JSON.stringify(data));
-    alert('Datos e Indicadores guardados correctamente.');
+    console.log("Datos e Indicadores respaldados de forma segura.");
 }
-
 
         function loadKpiData() {
     const raw = localStorage.getItem(getKpiStorageKey());
@@ -1046,7 +1120,7 @@ function construirEsquemaVisualCalendario() {
         if (i === actual) boton.classList.add('activo');
         
         let dataDia = registroMensualDias[i];
-        if (dataDia && (dataDia.dolar > 0 || dataDia.isola > 0 || dataDia.parmalat > 0 || dataDia.paveca > 0 || dataDia.mix > 0)) {
+        if (dataDia && (dataDia.dolar > 0 || dataDia.isola > 0 || dataDia.parmalat > 0 || dataDia.paveca > 0 || dataDia.mix > 0 || dataDia.eva > 0)) {
             boton.classList.add('con-datos');
         }
 
@@ -1069,13 +1143,14 @@ function intercambiarDiaDesdeInput() {
 
 function cargarDatosEspecificosDia(diaAlm) {
     construirEsquemaVisualCalendario();
-    let datos = registroMensualDias[diaAlm] || { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0, zona: '' };
+    let datos = registroMensualDias[diaAlm] || { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0, eva: 0, zona: '' };
     
     document.getElementById('resDoc').value = datos.dolar || '';
     document.getElementById('resIsola').value = datos.isola || '';
     document.getElementById('resParmalat').value = datos.parmalat || '';
     document.getElementById('resPaveca').value = datos.paveca || '';
     document.getElementById('resMix').value = datos.mix || '';
+    document.getElementById('obj_eva').value= datos.eva || '';
     document.getElementById('act_zona').value = datos.zona || '';
     
     ejecutarCalculosTotales();
@@ -1113,7 +1188,8 @@ function ejecutarCalculosTotales() {
         parmalat: parseFloat(document.getElementById('obj_parmalat')?.value) || 0,
         paveca: parseFloat(document.getElementById('obj_paveca')?.value) || 0,
         mix: parseFloat(document.getElementById('obj_mix')?.value) || 0,
-        eva: parseFloat(document.getElementById('obj_eva')?.value) || 0
+        eva: parseFloat(document.getElementById('obj_eva')?.value) || 0,
+        zona: parseFloat(document.getElementById('act_zona')?.value) || 0,
     };
 
     let diasRestantes = (diasTotales - diaActual) + 1;
@@ -1139,7 +1215,6 @@ function ejecutarCalculosTotales() {
 
 
 // --- SISTEMA INTERACTIVO DE CALENDARIO Y COHERENCIA REMANENTE ---
-let registroMensualDias = JSON.parse(localStorage.getItem('ontiveros_historial_v3')) || {};
 
 function construirEsquemaVisualCalendario() {
     const grid = document.getElementById('calendarioDias');
@@ -1156,8 +1231,8 @@ function construirEsquemaVisualCalendario() {
         
         if (i === actual) boton.classList.add('activo');
         
-        let dataDia = registroMensualDias[i];
-        if (dataDia && (dataDia.dolar > 0 || dataDia.isola > 0 || dataDia.parmalat > 0 || dataDia.paveca > 0 || dataDia.mix > 0)) {
+        var dataDia = registroMensualDias[i];
+        if (dataDia && (dataDia.dolar > 0 || dataDia.isola > 0 || dataDia.parmalat > 0 || dataDia.paveca > 0 || dataDia.mix > 0 || dataDia.eva > 0)) {
             boton.classList.add('con-datos');
         }
 
@@ -1180,14 +1255,14 @@ function intercambiarDiaDesdeInput() {
 
 function cargarDatosEspecificosDia(diaAlm) {
     construirEsquemaVisualCalendario();
-    let datos = registroMensualDias[diaAlm] || { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0, zona: '' };
+    let datos = registroMensualDias[diaAlm] || { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0, eva: 0, zona: '' };
     
     document.getElementById('resDoc').value = datos.dolar || '';
     document.getElementById('resIsola').value = datos.isola || '';
     document.getElementById('resParmalat').value = datos.parmalat || '';
     document.getElementById('resPaveca').value = datos.paveca || '';
     document.getElementById('resMix').value = datos.mix || '';
-    document.getElementById('act_zona').value = datos.zona || '';
+    document.getElementById('resEva').value = datos.eva || '';
     
     ejecutarCalculosTotales();
 }
@@ -1201,7 +1276,7 @@ function guardarEstadoDia() {
         parmalat: parseFloat(document.getElementById('resParmalat').value) || 0,
         paveca: parseFloat(document.getElementById('resPaveca').value) || 0,
         mix: parseFloat(document.getElementById('resMix').value) || 0,
-        zona: document.getElementById('act_zona').value
+        eva: parseFloat(document.getElementById('resEva').value) || 0,
     };
 
     localStorage.setItem('ontiveros_historial_v3', JSON.stringify(registroMensualDias));
@@ -1209,36 +1284,98 @@ function guardarEstadoDia() {
 }
 
 function ejecutarCalculosTotales() {
-    let diaActual = parseInt(document.getElementById('act_dia_actual').value) || 1;
-    let diasTotales = parseInt(document.getElementById('obj_dias_totales').value) || 23;
+    console.log("¡La función de cálculos se activó con éxito!");
+    
+    let diaActual = parseInt(document.getElementById('act_dia_actual')?.value) || 1;
+    let diasTotales = parseInt(document.getElementById('obj_dias_totales')?.value) || 23;
+    let diasRestantes = Math.max(diasTotales - diaActual + 1, 1);
 
-    let acHastaAyer = { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0 };
+    // Inicializamos las sumas acumuladas en 0
+    let totalesMes = { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0, eva: 0 };
 
-    for (let i = 1; i < diaActual; i++) {
-        let info = registroMensualDias[i] || { dolar: 0, isola: 0, parmalat: 0, paveca: 0, mix: 0 };
-        acHastaAyer.dolar += info.dolar;
-        acHastaAyer.isola += info.isola;
-        acHastaAyer.parmalat += info.parmalat;
-        acHastaAyer.paveca += info.paveca;
-        acHastaAyer.mix += info.mix;
+    // Intentamos capturar el historial de forma segura sin importar el orden de declaración
+    let historialDias = null;
+    try {
+        if (typeof registroMensualDias !== 'undefined' && registroMensualDias) {
+            historialDias = registroMensualDias;
+        } else {
+            historialDias = JSON.parse(localStorage.getItem('ontiveros_historial_v3')) || {};
+        }
+    } catch(e) {
+        historialDias = {};
     }
 
+    // 1. Sumamos el historial seguro de los días transcurridos
+    if (historialDias) {
+        for (let i = 1; i < diaActual; i++) {
+            let info = historialDias[i] || {};
+            totalesMes.dolar += parseFloat(info.dolar) || 0;
+            totalesMes.isola += parseFloat(info.isola) || 0;
+            totalesMes.parmalat += parseFloat(info.parmalat) || 0;
+            totalesMes.paveca += parseFloat(info.paveca) || 0;
+            totalesMes.mix += parseFloat(info.mix) || 0;
+            totalesMes.eva += parseFloat(info.eva) || 0;
+        }
+    }
+
+    // 2. Traemos las metas mensuales fijadas en la pestaña 1
     let objetivos = {
-        dolar: parseFloat(document.getElementById('obj_dolar').value) || 0,
-        isola: parseFloat(document.getElementById('obj_isola').value) || 0,
-        parmalat: parseFloat(document.getElementById('obj_parmalat').value) || 0,
-        paveca: parseFloat(document.getElementById('obj_paveca').value) || 0,
-        mix: parseFloat(document.getElementById('obj_mix').value) || 0
+        dolar: parseFloat(document.getElementById('obj_dolar')?.value) || 0,
+        isola: parseFloat(document.getElementById('obj_isola')?.value) || 0,
+        parmalat: parseFloat(document.getElementById('obj_parmalat')?.value) || 0,
+        paveca: parseFloat(document.getElementById('obj_paveca')?.value) || 0,
+        mix: parseFloat(document.getElementById('obj_mix')?.value) || 0,
+        eva: parseFloat(document.getElementById('obj_eva')?.value) || 0
     };
 
-    let diasRestantes = (diasTotales - diaActual) + 1;
-    if (diasRestantes <= 0) diasRestantes = 1;
+    // 3. CALCULO DE LA GESTIÓN DIARIA (Campos grises - Pestaña 2 usando tus IDs reales)
+    if (document.getElementById('reqDoc')) {
+        let falDolar = Math.max(objetivos.dolar - totalesMes.dolar, 0) / diasRestantes;
+        document.getElementById('reqDoc').value = falDolar.toFixed(2);
+    }
+    if (document.getElementById('reqIsola')) {
+        let falIso = Math.max(objetivos.isola - totalesMes.isola, 0) / diasRestantes;
+        document.getElementById('reqIsola').value = falIso.toFixed(2);
+    }
+    if (document.getElementById('reqParmalat')) {
+        let falPar = Math.max(objetivos.parmalat - totalesMes.parmalat, 0) / diasRestantes;
+        document.getElementById('reqParmalat').value = falPar.toFixed(2);
+    }
+    if (document.getElementById('reqPaveca')) {
+        let falPav = Math.max(objetivos.paveca - totalesMes.paveca, 0) / diasRestantes;
+        document.getElementById('reqPaveca').value = falPav.toFixed(2);
+    }
+    if (document.getElementById('reqMix')) {
+        let falMix = Math.max(objetivos.mix - totalesMes.mix, 0) / diasRestantes;
+        document.getElementById('reqMix').value = falMix.toFixed(2);
+    }
+    if (document.getElementById('reqEva')) {
+        let falEva = Math.max(objetivos.eva - totalesMes.eva, 0) / diasRestantes;
+        document.getElementById('reqEva').value = falEva.toFixed(2);
+    }
 
-    document.getElementById('reqDoc').value = Math.max(0, (objetivos.dolar - acHastaAyer.dolar) / diasRestantes).toFixed(2);
-    document.getElementById('reqIsola').value = Math.max(0, Math.ceil((objetivos.isola - acHastaAyer.isola) / diasRestantes));
-    document.getElementById('reqParmalat').value = Math.max(0, Math.ceil((objetivos.parmalat - acHastaAyer.parmalat) / diasRestantes));
-    document.getElementById('reqPaveca').value = Math.max(0, Math.ceil((objetivos.paveca - acHastaAyer.paveca) / diasRestantes));
-    document.getElementById('reqMix').value = Math.max(0, Math.ceil((objetivos.mix - acHastaAyer.mix) / diasRestantes));
+    // 4. ACTUALIZACIÓN VISUAL DE LAS BARRAS (Pestaña 3)
+    // Con un pequeño retraso para asegurar que la pestaña ya esté abierta en pantalla
+    setTimeout(() => {
+        function hacerCalculoBarra(idBarra, idPorcentaje, idFalta, totalLogrado, objetivoFijado) {
+            let porcentaje = objetivoFijado > 0 ? Math.min((totalLogrado / objetivoFijado) * 100, 100) : 0;
+            let faltante = Math.max(objetivoFijado - totalLogrado, 0);
+
+            let eBarra = document.getElementById(idBarra);
+            let ePorc = document.getElementById(idPorcentaje);
+            let eFalta = document.getElementById(idFalta);
+
+            if (eBarra) eBarra.style.width = porcentaje + '%';
+            if (ePorc) ePorc.innerText = Math.round(porcentaje) + '%';
+            if (eFalta) eFalta.innerText = faltante.toFixed(0);
+        }
+
+        hacerCalculoBarra('bar_iso', 'p_isola', 'f_isola', totalesMes.isola, objetivos.isola);
+        hacerCalculoBarra('bar_par', 'p_par', 'f_par', totalesMes.parmalat, objetivos.parmalat);
+        hacerCalculoBarra('bar_pav', 'p_pav', 'f_pav', totalesMes.paveca, objetivos.paveca);
+        hacerCalculoBarra('bar_mix', 'p_mix', 'f_mix', totalesMes.mix, objetivos.mix);
+        hacerCalculoBarra('bar_eva', 'p_eva', 'f_eva', totalesMes.eva, objetivos.eva);
+    }, 60);
 }
 
 function despacharReporteWhatsApp() {
@@ -1414,3 +1551,4 @@ function despacharReporteWhatsApp() {
     </script>
 </body>
 </html>
+
